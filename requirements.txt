@@ -5,4 +5,3 @@ pykrx
 scikit-learn
 plotly
 setuptools
-wheel
