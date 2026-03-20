@@ -1,3 +1,27 @@
+# [1] 에러 방지용 필수 패키지 강제 로드 (맨 위에 추가)
+import subprocess
+import sys
+
+try:
+    import pkg_resources
+except ImportError:
+    # 패키지가 없으면 실시간으로 설치 시도
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "setuptools"])
+    import pkg_resources
+
+# [2] 기존 라이브러리 임포트 시작
+import streamlit as st
+import pandas as pd
+import numpy as np
+from pykrx import stock
+from sklearn.ensemble import RandomForestRegressor
+from datetime import datetime, timedelta
+import plotly.graph_objects as go
+
+# --- 이후 기존 코드를 그대로 두시면 됩니다 ---
+
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
