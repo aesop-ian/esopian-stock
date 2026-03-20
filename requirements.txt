@@ -4,3 +4,4 @@ numpy
 pykrx
 scikit-learn
 plotly
+setuptools
