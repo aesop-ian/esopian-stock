@@ -1,3 +1,16 @@
+# 비상용 에러 우회 코드 (app.py 최상단에 추가)
+import sys
+try:
+    import pkg_resources
+except ImportError:
+    import pip
+    pip.main(['install', 'setuptools'])
+    import pkg_resources
+
+import streamlit as st
+# ... 기존 코드 계속 ...
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
