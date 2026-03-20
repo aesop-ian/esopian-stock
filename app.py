@@ -1,12 +1,13 @@
 import os
-import subprocess
 import sys
+import subprocess
 
-# [1] 시스템 패키지 강제 복구 로직 (가장 중요)
+# [1] pkg_resources 에러 원천 봉쇄 로직 (최상단 필수)
 try:
     import pkg_resources
 except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "setuptools", "wheel"])
+    # 시스템에 setuptools가 없으면 강제 설치
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "setuptools"])
     import pkg_resources
 
 import streamlit as st
@@ -15,11 +16,11 @@ import numpy as np
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 
-# [2] pykrx 임포트 (오류 방지를 위해 지연 임포트)
+# [2] pykrx 임포트 (에러 발생 시 즉시 재설치 시도)
 try:
     from pykrx import stock
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "pykrx"])
+except Exception:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pykrx"])
     from pykrx import stock
 
 from sklearn.ensemble import RandomForestRegressor
@@ -33,7 +34,7 @@ def get_indicators(df):
     df['BBL'] = df['MA20'] - (df['std'] * 2)
     return df
 
-# --- 페이지 설정 및 디자인 ---
+# --- 페이지 디자인 ---
 st.set_page_config(page_title="Esopian Framework", layout="wide")
 st.markdown("""
     <style>
@@ -46,7 +47,7 @@ st.markdown("""
 st.title("🛡️ Esopian Stock Analysis Framework")
 st.caption("AI Forecasting & Quantitative Analysis Terminal")
 
-# --- 사이드바 및 실행 ---
+# --- 사이드바 설정 ---
 st.sidebar.header("📊 분석 설정")
 target = st.sidebar.text_input("종목코드", value="141080")
 days_range = st.sidebar.slider("AI 학습 기간 (일)", 200, 1000, 500)
@@ -54,7 +55,7 @@ analyze_btn = st.sidebar.button("전략 분석 실행")
 
 if analyze_btn:
     try:
-        with st.spinner('데이터를 분석 중입니다...'):
+        with st.spinner('Framework 엔진 가동 중...'):
             name = stock.get_market_ticker_name(target)
             if isinstance(name, pd.Series): name = name.iloc[0]
             
@@ -63,8 +64,8 @@ if analyze_btn:
             
             df_p = stock.get_market_ohlcv(start_date, end_date, target)
             df_p = get_indicators(df_p).dropna()
-            df_i = stock.get_market_net_purchases_of_equities_by_ticker(start_date, end_date, target)
             
+            # 메트릭 표시
             c1, c2, c3 = st.columns([1, 1, 2])
             c1.metric("현재가", f"{df_p['종가'].iloc[-1]:,.0f}원")
             c2.metric("종목명", name)
@@ -75,6 +76,7 @@ if analyze_btn:
 
             st.markdown("---")
             
+            # 차트 및 AI 예측
             col_l, col_r = st.columns([2, 1])
             with col_l:
                 st.subheader("📈 주가 추세")
@@ -85,11 +87,12 @@ if analyze_btn:
                 st.plotly_chart(fig, use_container_width=True)
 
             with col_r:
-                st.subheader("🤖 AI 목표가")
+                st.subheader("🤖 AI 예측 모델")
                 X = df_p[['종가', '거래량', '시가', '고가', '저가']]
                 y = df_p['종가'].shift(-1).ffill()
-                model = RandomForestRegressor(n_estimators=100, random_state=42).fit(X, y)
+                model = RandomForestRegressor(n_estimators=50, random_state=42).fit(X, y)
                 p_1d = model.predict([X.iloc[-1]])[0]
-                st.info(f"내일 예상가: {p_1d:,.0f}원")
+                st.success(f"내일 예상가: {p_1d:,.0f}원")
+                
     except Exception as e:
-        st.error(f"오류 발생: {e}")
+        st.error(f"분석 중 오류 발생: {e}")
